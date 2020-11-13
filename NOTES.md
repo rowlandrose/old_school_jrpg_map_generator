@@ -9,26 +9,26 @@ diamond square
 
 Rough outline of what create.world app does:
 
-Defines tile information
-Generate main heightmap
-(Display heightmap)
-Generate main tile layout
-	Determine water, grass, hill and mountain based on heightmap
-	Determine forest & desert with simplex noise
-		Low parts are forest, high are desert
-		Only apply forest to grass
-		Desert can apply to grass, hills and mountain
-		Combine simplex noise with a finer simplex noise, for more details
-	Wetlands / swamp - another simplex noise
-	Generate coastline dunes
-	Generate river starting points
-		Attempt to control distance between river starts
-	Draw each river
-		Binary map of river placement
-	Bridges
-	Caves
-	Towns / Castles
-Create transition tiles - sand and water
+- Defines tile information
+- Generate main heightmap
+- (Display heightmap)
+- Generate main tile layout
+	- Determine water, grass, hill and mountain based on heightmap
+	- Determine forest & desert with simplex noise
+		- Low parts are forest, high are desert
+		- Only apply forest to grass
+		- Desert can apply to grass, hills and mountain
+		- Combine simplex noise with a finer simplex noise, for more details
+	- Wetlands / swamp - another simplex noise
+	- Generate coastline dunes
+	- Generate river starting points
+		- Attempt to control distance between river starts
+	- Draw each river
+		- Binary map of river placement
+	- Bridges
+	- Caves
+	- Towns / Castles
+- Create transition tiles - sand and water
 
 I'll need to do same things. But saving png to local files.
 Perhaps make a CLI where you can specify map size.
