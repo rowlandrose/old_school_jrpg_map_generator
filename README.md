@@ -26,6 +26,10 @@ Seph Gentle for his [Javascript library for 2d & 3d perlin noise and simplex noi
 
 Gilles Leblanc for his series of blog posts on [Creating a random 2d game world map](https://gillesleblanc.wordpress.com/2012/10/16/creating-a-random-2d-game-world-map/) for inspiration and getting me thinking about rivers.
 
+---
+
+[Raiders (WIP)](https://github.com/dabernado/raiders) for having an example of how to use the "terr" terrain generation algorythms successfully (had to use git repo instead of crate).
+
 # Change Log
 
 0.1.0 - 11/13/2020

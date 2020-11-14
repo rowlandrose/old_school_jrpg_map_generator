@@ -1,6 +1,13 @@
-const DEFAULT_ROWS: u16 = 512;
-const DEFAULT_COLS: u16 = 512;
+use terr::{
+    heightmap::{Heightmap, Voronoi, diamond_square, fault_displacement},
+    unbounded::Perlin,
+};
+
+use rand::prelude::*;
+use rand_distr::{Standard, LogNormal, Uniform, UnitCircle, Exp1};
+
 const TILE_SIZE: u8 = 16;
+const HEIGHTMAP_RANGE: u8 = 100;
 
 struct Tile {
     name: String,
@@ -23,25 +30,24 @@ impl Tile {
 
 struct Tilemap {
     tiles: Vec<Tile>,
-    width: u16,
-    height: u16,
+    width: u32,
+    height: u32,
 }
 
 impl Tilemap {
 
-    fn new(width: u16, height: u16, tiles: Vec<Tile>) -> Tilemap {
+    fn new(width: u32, height: u32, tiles: Vec<Tile>) -> Tilemap {
         Tilemap { tiles, width, height }
     }
 }
 
 fn main() {
 
-    let mut rows = DEFAULT_ROWS;
-    let mut cols = DEFAULT_COLS;
+    let cells = 2_u32.pow(8) + 1; // Has to be power of 2 + 1 for "terr" to work
 
     // Define tilemap with new tile information
 
-    let tilemap = Tilemap::new(cols, rows, vec![
+    let tilemap = Tilemap::new(cells, cells, vec![
         Tile::new("grass",             "grass", true,  0),
         Tile::new("flowers",           "grass", true,  1),
         Tile::new("thick_grass",       "grass", true,  2),
@@ -96,5 +102,27 @@ fn main() {
 
     for n in tilemap.tiles {
         println!("Tile name: {}", n.name);
+    }
+
+    // Generate main heightmap
+
+    // Initiate heightmap at all zeroes
+    let mut heightmap = Heightmap::new_flat((cells, cells), (100.0, 100.0));
+
+    // Randomise the height of the four corners
+    let distr = LogNormal::new(0.5, 1.0).unwrap();
+    let mut rng = rand::thread_rng();
+    for (x, y) in [(0, 0), (0, cells-1), (cells-1, 0), (cells-1, cells-1)].iter() {
+        let h = distr.sample(&mut rng) as f32;
+        heightmap.set(*x, *y, h);
+    }
+
+    // Note: Normal(0, scale) is possibly better, but not yet available for f32.
+    let scale = 0.1;
+    let distr = Uniform::new(-scale, scale);
+    diamond_square(&mut heightmap, 0, &mut rng, distr).unwrap();
+
+    for cell in 0..cells {
+        println!("Heightmap value: {}", heightmap.get(cell, 0));
     }
 }

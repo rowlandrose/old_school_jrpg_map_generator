@@ -8,5 +8,7 @@ edition = "2018"
 
 [dependencies]
 opensimplex_noise_rs = "0.3.0"
-terr = "0.1.2"
+terr = { git = "https://github.com/dhardy/terr" }
 image = "0.23.11"
+rand = "0.7.3"
+rand_distr = "0.3.0"
