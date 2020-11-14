@@ -2,6 +2,8 @@ use terr::heightmap::{Heightmap, diamond_square};
 
 use rand::prelude::*;
 use rand_distr::{LogNormal, Uniform};
+use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage};
+use std::fs;
 
 const TILE_SIZE: u8 = 16;
 const HEIGHTMAP_RANGE: u8 = 100;
@@ -135,10 +137,12 @@ fn main() {
         println!("Heightmap value: {}", heightmap.get(cell, 0));
     }
 
-    // Test
-    /*let between = Uniform::from(0..100);
-    let mut rng = rand::thread_rng();
-    for _ in 0..100 {
-        println!("{}", between.sample(&mut rng));
-    }*/
+    // Write test png to see heightmap at this stage
+    let ratio = 256.0 / (HEIGHTMAP_RANGE as f32);
+    let mut img = ImageBuffer::from_fn(cells, cells, |x, y| {
+        image::Luma([(heightmap.get(x, y) * ratio).round() as u8])
+    });
+    fs::create_dir("rendered_images").unwrap();
+    img.save("rendered_images/test.png").unwrap();
+
 }
