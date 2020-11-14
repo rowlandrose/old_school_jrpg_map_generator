@@ -1,10 +1,7 @@
-use terr::{
-    heightmap::{Heightmap, Voronoi, diamond_square, fault_displacement},
-    unbounded::Perlin,
-};
+use terr::heightmap::{Heightmap, diamond_square};
 
 use rand::prelude::*;
-use rand_distr::{Standard, LogNormal, Uniform, UnitCircle, Exp1};
+use rand_distr::{LogNormal, Uniform};
 
 const TILE_SIZE: u8 = 16;
 const HEIGHTMAP_RANGE: u8 = 100;
@@ -38,6 +35,23 @@ impl Tilemap {
 
     fn new(width: u32, height: u32, tiles: Vec<Tile>) -> Tilemap {
         Tilemap { tiles, width, height }
+    }
+}
+
+fn normalize_heightmap_to_range(
+    heightmap: &mut Heightmap<f32>, 
+    cells: u32, 
+    max_exclusive: u32
+) {
+
+    let r = heightmap.range();
+    let new_max = r.1 - r.0;
+
+    for x in 0..cells {
+        for y in 0..cells {
+            let old_val = heightmap.get(x, y);
+            heightmap.set(x, y, old_val * ((max_exclusive as f32)-1.0) / new_max);
+        }
     }
 }
 
@@ -104,25 +118,27 @@ fn main() {
         println!("Tile name: {}", n.name);
     }
 
-    // Generate main heightmap
+    //// Generate main heightmap
 
     // Initiate heightmap at all zeroes
-    let mut heightmap = Heightmap::new_flat((cells, cells), (100.0, 100.0));
+    let mut heightmap = Heightmap::new_flat((cells, cells), (0.0, 0.0));
 
-    // Randomise the height of the four corners
-    let distr = LogNormal::new(0.5, 1.0).unwrap();
+    // Perform diamond square algorythm on heightmap
+    let distr = Uniform::new(0.0 as f32, 1.0 as f32);
     let mut rng = rand::thread_rng();
-    for (x, y) in [(0, 0), (0, cells-1), (cells-1, 0), (cells-1, cells-1)].iter() {
-        let h = distr.sample(&mut rng) as f32;
-        heightmap.set(*x, *y, h);
-    }
-
-    // Note: Normal(0, scale) is possibly better, but not yet available for f32.
-    let scale = 0.1;
-    let distr = Uniform::new(-scale, scale);
     diamond_square(&mut heightmap, 0, &mut rng, distr).unwrap();
+
+    // Reset heightmap to desired range
+    normalize_heightmap_to_range(&mut heightmap, cells, HEIGHTMAP_RANGE as u32);
 
     for cell in 0..cells {
         println!("Heightmap value: {}", heightmap.get(cell, 0));
     }
+
+    // Test
+    /*let between = Uniform::from(0..100);
+    let mut rng = rand::thread_rng();
+    for _ in 0..100 {
+        println!("{}", between.sample(&mut rng));
+    }*/
 }
