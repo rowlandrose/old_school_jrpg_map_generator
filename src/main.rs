@@ -1,9 +1,11 @@
-use terr::heightmap::{Heightmap, diamond_square};
+use terr::heightmap::{Heightmap, diamond_square}; // Diamond Square and Heightmap
 
-use rand::prelude::*;
-use rand_distr::{LogNormal, Uniform, Normal};
-use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage};
-use std::fs;
+use rand::prelude::*; // Random
+use rand_distr::{LogNormal, Uniform, Normal}; // Random
+use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage}; // Writing PNG
+use std::fs; // Filesystem
+use opensimplex_noise_rs::OpenSimplexNoise; // Simplex Noise
+use std::time::Instant; // for timer
 
 const TILE_SIZE: u8 = 16;
 const HEIGHTMAP_RANGE: u8 = 100;
@@ -57,7 +59,7 @@ fn normalize_heightmap_to_range(
     }
 }
 
-fn test_png(heightmap: &mut Heightmap<f32>, cells: u32) {
+fn test_png(heightmap: &mut Heightmap<f32>, cells: u32, filename: &str) {
 
     let ratio = 256.0 / (HEIGHTMAP_RANGE as f32);
     let mut img = ImageBuffer::from_fn(cells, cells, |x, y| {
@@ -67,10 +69,12 @@ fn test_png(heightmap: &mut Heightmap<f32>, cells: u32) {
         Ok(x) => println!("Created directory \"rendered_images\"."),
         Err(e) => println!("Directory \"rendered_images\" already exists.")
     };
-    img.save("rendered_images/test.png").unwrap();
+    img.save(["rendered_images/", filename, ".png"].concat()).unwrap();
 }
 
 fn main() {
+
+    let now = Instant::now(); // For measuring execution time
 
     let cells = 2_u32.pow(8) + 1; // Has to be power of 2 + 1 for "terr" to work
 
@@ -129,18 +133,13 @@ fn main() {
         Tile::new("sand_0001",         "sand",  true,  49),
     ]);
 
-    // print all tile names for test
-    for n in tilemap.tiles {
-        println!("Tile name: {}", n.name);
-    }
-
     //// Generate main heightmap
 
     // Initiate heightmap at all zeroes
     let mut heightmap = Heightmap::new_flat((cells, cells), (0.0, 0.0));
 
     // Perform diamond square algorythm on heightmap
-    
+
     //let distr = Uniform::new(0.0 as f32, 1.0 as f32); // Obvious star pattern
     //let distr = LogNormal::new(0.0 as f32, 1.0 as f32).unwrap(); // Less obvious star pattern
     let distr = Normal::new(0.0 as f32, 1.0 as f32).unwrap(); // No star pattern (best!)
@@ -150,12 +149,40 @@ fn main() {
     // Reset heightmap to desired range
     normalize_heightmap_to_range(&mut heightmap, cells, HEIGHTMAP_RANGE as u32);
 
-    // print one row of cell values for test
-    for cell in 0..cells {
-        println!("Heightmap value: {}", heightmap.get(cell, 0));
+    // Write test png to see heightmap at this stage
+    test_png(&mut heightmap, cells, "test");
+
+    // Blend heightmap with a simplex noise heightmap
+    let noise_seed: i64 = rand::thread_rng().gen();
+    let noise_generator = OpenSimplexNoise::new(Some(noise_seed));
+    let scale = 0.044; // The smaller this number, the larger the blobs
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let old_val = heightmap.get(x, y);
+
+            let noise_val = noise_generator.eval_2d(x as f64 * scale, y as f64 * scale) as f32;
+
+            let adjusted_noise_val = ((noise_val + 1.0) / 2.0) * (HEIGHTMAP_RANGE as f32);
+
+            let diff = adjusted_noise_val - old_val;
+
+            let adjust = diff / 4.0;
+
+            let new_val = old_val + adjust;
+
+            heightmap.set(x, y, new_val);
+        }
     }
 
     // Write test png to see heightmap at this stage
-    test_png(&mut heightmap, cells);
+    test_png(&mut heightmap, cells, "test2");
 
+    // print one row of cell values for test
+    /*for cell in 0..cells {
+        println!("Heightmap value: {}", heightmap.get(cell, 0));
+    }*/
+
+    println!("Script finished in {} seconds.", now.elapsed().as_secs_f32());
 }
