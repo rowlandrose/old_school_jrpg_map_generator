@@ -1,7 +1,7 @@
 use terr::heightmap::{Heightmap, diamond_square};
 
 use rand::prelude::*;
-use rand_distr::{LogNormal, Uniform};
+use rand_distr::{LogNormal, Uniform, Normal};
 use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage};
 use std::fs;
 
@@ -52,9 +52,22 @@ fn normalize_heightmap_to_range(
     for x in 0..cells {
         for y in 0..cells {
             let old_val = heightmap.get(x, y);
-            heightmap.set(x, y, old_val * ((max_exclusive as f32)-1.0) / new_max);
+            heightmap.set(x, y, (old_val - r.0) * ((max_exclusive as f32)-1.0) / new_max);
         }
     }
+}
+
+fn test_png(heightmap: &mut Heightmap<f32>, cells: u32) {
+
+    let ratio = 256.0 / (HEIGHTMAP_RANGE as f32);
+    let mut img = ImageBuffer::from_fn(cells, cells, |x, y| {
+        image::Luma([(heightmap.get(x, y) * ratio).round() as u8])
+    });
+    match fs::create_dir("rendered_images") {
+        Ok(x) => println!("Created directory \"rendered_images\"."),
+        Err(e) => println!("Directory \"rendered_images\" already exists.")
+    };
+    img.save("rendered_images/test.png").unwrap();
 }
 
 fn main() {
@@ -116,6 +129,7 @@ fn main() {
         Tile::new("sand_0001",         "sand",  true,  49),
     ]);
 
+    // print all tile names for test
     for n in tilemap.tiles {
         println!("Tile name: {}", n.name);
     }
@@ -126,23 +140,22 @@ fn main() {
     let mut heightmap = Heightmap::new_flat((cells, cells), (0.0, 0.0));
 
     // Perform diamond square algorythm on heightmap
-    let distr = Uniform::new(0.0 as f32, 1.0 as f32);
+    
+    //let distr = Uniform::new(0.0 as f32, 1.0 as f32); // Obvious star pattern
+    //let distr = LogNormal::new(0.0 as f32, 1.0 as f32).unwrap(); // Less obvious star pattern
+    let distr = Normal::new(0.0 as f32, 1.0 as f32).unwrap(); // No star pattern (best!)
     let mut rng = rand::thread_rng();
     diamond_square(&mut heightmap, 0, &mut rng, distr).unwrap();
 
     // Reset heightmap to desired range
     normalize_heightmap_to_range(&mut heightmap, cells, HEIGHTMAP_RANGE as u32);
 
+    // print one row of cell values for test
     for cell in 0..cells {
         println!("Heightmap value: {}", heightmap.get(cell, 0));
     }
 
     // Write test png to see heightmap at this stage
-    let ratio = 256.0 / (HEIGHTMAP_RANGE as f32);
-    let mut img = ImageBuffer::from_fn(cells, cells, |x, y| {
-        image::Luma([(heightmap.get(x, y) * ratio).round() as u8])
-    });
-    fs::create_dir("rendered_images").unwrap();
-    img.save("rendered_images/test.png").unwrap();
+    test_png(&mut heightmap, cells);
 
 }
