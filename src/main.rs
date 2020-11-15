@@ -17,31 +17,48 @@ struct Tile {
     name: String,
     cat: String,
     walkable: bool,
-    num: u16,
+    id: u16,
 }
 
 impl Tile {
 
-    fn new(name: &str, cat: &str, walkable: bool, num: u16) -> Tile {
+    fn new(name: &str, cat: &str, walkable: bool, id: u16) -> Tile {
         Tile { 
             name: String::from(name), 
             cat: String::from(cat), 
             walkable, 
-            num 
+            id 
         }
     }
 }
 
-struct Tilemap {
+struct Tilelist {
     tiles: Vec<Tile>,
-    width: u32,
-    height: u32,
 }
 
-impl Tilemap {
+impl Tilelist {
 
-    fn new(width: u32, height: u32, tiles: Vec<Tile>) -> Tilemap {
-        Tilemap { tiles, width, height }
+    fn new(tiles: Vec<Tile>) -> Tilelist {
+        Tilelist { tiles }
+    }
+
+    fn tile_at_name(&self, name: &str) -> Result<u16, &str> {
+
+        let mut found = false;
+        let mut found_id = 0;
+
+        for t in 0..self.tiles.len() {
+            if self.tiles[t].name == name {
+                found_id = self.tiles[t].id;
+                found = true;
+                break;
+            }
+        }
+        if found {
+            Ok(found_id)
+        } else {
+            Err("Name not found in Tilelist.")
+        }
     }
 }
 
@@ -115,9 +132,9 @@ fn main() {
 
     let cells = 2_u32.pow(8) + 1; // Has to be power of 2 + 1 for "terr" to work
 
-    // Define tilemap with new tile information
+    // Define tilelist with new tile information
 
-    let tilemap = Tilemap::new(cells, cells, vec![
+    let tilelist = Tilelist::new(vec![
         Tile::new("grass",             "grass", true,  0),
         Tile::new("flowers",           "grass", true,  1),
         Tile::new("thick_grass",       "grass", true,  2),
@@ -294,6 +311,30 @@ fn main() {
     }
 
     test_png(&mut heightmap, cells, "test5");
+
+    // Here we begin populating tilemap.
+    // First determine water, grass, hill and mountain based on heightmap
+
+    // Initiate tilemap as a Heightmap
+    let mut tilemap = Heightmap::new_flat((cells, cells), (0.0, 0.0)); // All grass tiles, id 0
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let h_val = heightmap.get(x, y);
+            let t_val = if h_val < CUTOFF_WATER as f32 {
+                tilelist.tile_at_name("water_0000").unwrap()
+            } else if h_val < CUTOFF_TERRAIN as f32 {
+                tilelist.tile_at_name("grass").unwrap()
+            } else if h_val < 85.0 {
+                tilelist.tile_at_name("hill_grass").unwrap()
+            } else {
+                tilelist.tile_at_name("mountain_grass").unwrap()
+            };
+
+            tilemap.set(x, y, t_val as f32);
+        }
+    }
 
     println!("Script finished in {} seconds.", now.elapsed().as_secs_f32());
 }
