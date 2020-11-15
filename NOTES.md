@@ -2,6 +2,10 @@
 
 This is used as a rough scratchpad while developing.
 
+---
+
+[This link](https://github.com/dabernado/raiders/blob/dev/src/gen/mod.rs) was useful for seeing how the "terr" library should be used with diamond square.
+
 I'll need libraries for these probably:
 
 2d simplex noise algorythm

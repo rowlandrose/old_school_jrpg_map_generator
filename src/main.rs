@@ -13,6 +13,7 @@ const CUTOFF_TERRAIN: u8 = 80;
 const CUTOFF_WATER: u8 = 50;
 const RIVER_START_MIN_DIST: u8 = 5;
 
+#[derive(Clone)]
 struct Tile {
     name: String,
     cat: String,
@@ -32,6 +33,43 @@ impl Tile {
     }
 }
 
+#[derive(Clone)]
+struct Tilemap {
+    tiles: Vec<Vec<Tile>>,
+}
+
+impl Tilemap {
+
+    fn new(width: u32, height: u32, tilename: &str, tilelist: &Tilelist) -> Self {
+
+        let mut tiles = Vec::new();
+
+        for _ in 0..height {
+
+            let mut row = Vec::new();
+
+            for _ in 0..width {
+
+                row.push(tilelist.tile_at_name(tilename).unwrap());
+            }
+            tiles.push(row);
+        }
+
+        Tilemap { tiles: tiles }
+    }
+
+    fn get(&self, x: u32, y: u32) -> Tile {
+
+        self.tiles[x as usize][y as usize].clone()
+    }
+
+    fn set_by_name(&mut self, x: u32, y: u32, name: &str, tilelist: &Tilelist) {
+
+        self.tiles[x as usize][y as usize] = tilelist.tile_at_name(name).unwrap();
+    }
+}
+
+#[derive(Clone)]
 struct Tilelist {
     tiles: Vec<Tile>,
 }
@@ -39,23 +77,23 @@ struct Tilelist {
 impl Tilelist {
 
     fn new(tiles: Vec<Tile>) -> Tilelist {
-        Tilelist { tiles }
+        Tilelist { tiles: tiles }
     }
 
-    fn tile_at_name(&self, name: &str) -> Result<u16, &str> {
+    fn tile_at_name(&self, name: &str) -> Result<Tile, &str> {
 
         let mut found = false;
-        let mut found_id = 0;
+        let mut found_tile = self.tiles[0].clone();
 
         for t in 0..self.tiles.len() {
             if self.tiles[t].name == name {
-                found_id = self.tiles[t].id;
+                found_tile = self.tiles[t].clone();
                 found = true;
                 break;
             }
         }
         if found {
-            Ok(found_id)
+            Ok(found_tile)
         } else {
             Err("Name not found in Tilelist.")
         }
@@ -315,26 +353,30 @@ fn main() {
     // Here we begin populating tilemap.
     // First determine water, grass, hill and mountain based on heightmap
 
-    // Initiate tilemap as a Heightmap
-    let mut tilemap = Heightmap::new_flat((cells, cells), (0.0, 0.0)); // All grass tiles, id 0
+    let mut tilemap = Tilemap::new(cells, cells, "grass", &tilelist);
 
     for x in 0..cells {
         for y in 0..cells {
 
             let h_val = heightmap.get(x, y);
-            let t_val = if h_val < CUTOFF_WATER as f32 {
-                tilelist.tile_at_name("water_0000").unwrap()
+            let t_name = if h_val < CUTOFF_WATER as f32 {
+                "water_0000"
             } else if h_val < CUTOFF_TERRAIN as f32 {
-                tilelist.tile_at_name("grass").unwrap()
+               "grass"
             } else if h_val < 85.0 {
-                tilelist.tile_at_name("hill_grass").unwrap()
+                "hill_grass"
             } else {
-                tilelist.tile_at_name("mountain_grass").unwrap()
+                "mountain_grass"
             };
 
-            tilemap.set(x, y, t_val as f32);
+            tilemap.set_by_name(x, y, t_name, &tilelist);
         }
     }
+
+    // print one row of cell values for test
+    /*for cell in 0..cells {
+        println!("Tilemap value: {}", tilemap.get(cell, 200).name);
+    }*/
 
     println!("Script finished in {} seconds.", now.elapsed().as_secs_f32());
 }
