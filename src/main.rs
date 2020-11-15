@@ -1,13 +1,15 @@
 use terr::heightmap::{Heightmap, diamond_square}; // Diamond Square and Heightmap
 
 use rand::prelude::*; // Random
-use rand_distr::{LogNormal, Uniform, Normal}; // Random
-use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage}; // Writing PNG
+use rand_distr::{Normal}; // Random
+use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage, DynamicImage}; // Writing PNG
+use image::io::Reader as ImageReader; // Reading PNG
 use std::fs; // Filesystem
 use opensimplex_noise_rs::OpenSimplexNoise; // Simplex Noise
 use std::time::Instant; // for timer
 
 const TILE_SIZE: u8 = 16;
+const TILES_WIDE_SPRITE_SHEET: u8 = 5;
 const HEIGHTMAP_RANGE: u8 = 100;
 const CUTOFF_TERRAIN: u8 = 80;
 const CUTOFF_WATER: u8 = 50;
@@ -146,13 +148,41 @@ fn normalize_heightmap_to_range(
 fn test_png(heightmap: &mut Heightmap<f32>, cells: u32, filename: &str) {
 
     let ratio = 256.0 / (HEIGHTMAP_RANGE as f32);
-    let mut img = ImageBuffer::from_fn(cells, cells, |x, y| {
+    let img = ImageBuffer::from_fn(cells, cells, |x, y| {
         image::Luma([(heightmap.get(x, y) * ratio).round() as u8])
     });
     match fs::create_dir("rendered_images") {
-        Ok(x) => println!("Created directory \"rendered_images\"."),
-        Err(e) => println!("Directory \"rendered_images\" already exists.")
+        Ok(_) => println!("Created directory \"rendered_images\"."),
+        Err(_) => println!("Directory \"rendered_images\" already exists.")
     };
+    img.save(["rendered_images/", filename, ".png"].concat()).unwrap();
+}
+
+fn map_png(tilemap: &Tilemap, cells: u32, filename: &str) {
+    
+    let tile_img = image::open("old_school_tiles.png").unwrap().to_rgb();
+    let mut img = ImageBuffer::from_fn(cells * TILE_SIZE as u32, cells * TILE_SIZE as u32, |_, _| {
+        image::Rgb([0, 0, 0])
+    });
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let tile = tilemap.get(x, y);
+
+            // Get tile graphic from spritesheet
+            let crop_x = tile.id % TILES_WIDE_SPRITE_SHEET as u16;
+            let crop_y = tile.id / TILES_WIDE_SPRITE_SHEET as u16;
+
+            let tile_crop = DynamicImage::ImageRgb8(tile_img.clone()).crop_imm(
+                crop_x as u32, crop_y as u32, TILE_SIZE as u32, TILE_SIZE as u32
+            ).into_rgb();
+
+            // Overlay onto main image in correct spot
+            image::imageops::overlay(&mut img, &tile_crop, TILE_SIZE as u32 * x, TILE_SIZE as u32 * y);
+        }
+    }
+
     img.save(["rendered_images/", filename, ".png"].concat()).unwrap();
 }
 
@@ -377,6 +407,8 @@ fn main() {
     /*for cell in 0..cells {
         println!("Tilemap value: {}", tilemap.get(cell, 200).name);
     }*/
+
+    map_png(&mut tilemap, cells, "test6");
 
     println!("Script finished in {} seconds.", now.elapsed().as_secs_f32());
 }
