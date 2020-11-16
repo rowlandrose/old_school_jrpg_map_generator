@@ -102,6 +102,42 @@ impl Tilelist {
     }
 }
 
+fn apply_simplex(heightmap: &mut Heightmap<f32>, cells: u32, scale: f64) {
+
+    let noise_seed: i64 = rand::thread_rng().gen();
+    let noise_generator = OpenSimplexNoise::new(Some(noise_seed));
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let noise_val = noise_generator.eval_2d(x as f64 * scale, y as f64 * scale) as f32;
+
+            let new_val = ((noise_val + 1.0) / 2.0) * (HEIGHTMAP_RANGE as f32);
+
+            heightmap.set(x, y, new_val);
+        }
+    }
+}
+
+fn blended_heightmap(hm1: Heightmap<f32>, hm2: Heightmap<f32>, cells: u32) -> Heightmap<f32> {
+
+    let mut new_hm = Heightmap::new_flat((cells, cells), (0.0, 0.0));
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let val_1 = hm1.get(x, y);
+            let val_2 = hm2.get(x, y);
+
+            let new_val = (val_1 + val_2) / 2.0;
+
+            new_hm.set(x, y, new_val);
+        }
+    }
+
+    new_hm
+}
+
 fn normalize_heightmap_to_range(
     heightmap: &mut Heightmap<f32>, 
     cells: u32, 
@@ -134,8 +170,6 @@ fn normalize_heightmap_to_range(
     }
 
     let new_max = max - min;
-
-    println!("Manual range: min {}, max {}.", min, max);
 
     for x in 0..cells {
         for y in 0..cells {
@@ -179,7 +213,9 @@ fn map_png(tilemap: &Tilemap, cells: u32, filename: &str) {
             ).into_rgb();
 
             // Overlay onto main image in correct spot
-            image::imageops::overlay(&mut img, &tile_crop, TILE_SIZE as u32 * x, TILE_SIZE as u32 * y);
+            // overlay and replace seem to both take the same amount of time... a lot
+            //image::imageops::overlay(&mut img, &tile_crop, TILE_SIZE as u32 * x, TILE_SIZE as u32 * y);
+            image::imageops::replace(&mut img, &tile_crop, TILE_SIZE as u32 * x, TILE_SIZE as u32 * y);
         }
     }
 
@@ -409,6 +445,25 @@ fn main() {
     }*/
 
     map_png(&mut tilemap, cells, "test6");
+
+    // Determine forest & desert with simplex noise
+    // Low parts are forest, high are desert
+    // Only apply forest to grass
+    // Desert can apply to grass, hills and mountain
+
+    let mut fd_hm1 = Heightmap::new_flat((cells, cells), (0.0, 0.0));
+    let mut fd_hm2 = Heightmap::new_flat((cells, cells), (0.0, 0.0));
+
+    apply_simplex(&mut fd_hm1, cells, 0.088);
+    apply_simplex(&mut fd_hm2, cells, 0.022);
+
+    test_png(&mut fd_hm1, cells, "test7");
+    test_png(&mut fd_hm2, cells, "test8");
+
+    // combine simplex noise with a finer simplex noise, for more details
+    let mut forest_desert_hm = blended_heightmap(fd_hm1, fd_hm2, cells);
+
+    test_png(&mut forest_desert_hm, cells, "test9");
 
     println!("Script finished in {} seconds.", now.elapsed().as_secs_f32());
 }
