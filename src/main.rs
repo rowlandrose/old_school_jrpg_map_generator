@@ -444,8 +444,6 @@ fn main() {
         println!("Tilemap value: {}", tilemap.get(cell, 200).name);
     }*/
 
-    map_png(&mut tilemap, cells, "test6");
-
     // Determine forest & desert with simplex noise
     // Low parts are forest, high are desert
     // Only apply forest to grass
@@ -457,13 +455,13 @@ fn main() {
     apply_simplex(&mut fd_hm1, cells, 0.088);
     apply_simplex(&mut fd_hm2, cells, 0.022);
 
-    test_png(&mut fd_hm1, cells, "test7");
-    test_png(&mut fd_hm2, cells, "test8");
+    test_png(&mut fd_hm1, cells, "test6");
+    test_png(&mut fd_hm2, cells, "test7");
 
     // combine simplex noise with a finer simplex noise, for more details
     let mut forest_desert_hm = blended_heightmap(fd_hm1, fd_hm2, cells);
 
-    test_png(&mut forest_desert_hm, cells, "test9");
+    test_png(&mut forest_desert_hm, cells, "test8");
 
     // Determine forest and desert tiles based on combined noise map
     for x in 0..cells {
@@ -511,7 +509,25 @@ fn main() {
         }
     }
 
-    map_png(&mut tilemap, cells, "test10");
+    // Add wetlands / swamp
+
+    let mut swamp_hm = Heightmap::new_flat((cells, cells), (0.0, 0.0));
+
+    apply_simplex(&mut swamp_hm, cells, 0.022);
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let tile = tilemap.get(x, y);
+            let s_val = swamp_hm.get(x, y);
+
+            if s_val > 80.0 && tile.cat == "grass" {
+                tilemap.set_by_name(x, y, "swamp", &tilelist);
+            }
+        }
+    }
+
+    map_png(&mut tilemap, cells, "test9");
 
     println!("Script finished in {} seconds.", now.elapsed().as_secs_f32());
 }
