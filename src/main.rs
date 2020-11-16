@@ -465,5 +465,53 @@ fn main() {
 
     test_png(&mut forest_desert_hm, cells, "test9");
 
+    // Determine forest and desert tiles based on combined noise map
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let tile = tilemap.get(x, y);
+            let fd_val = forest_desert_hm.get(x, y);
+            let r_num = rand::thread_rng().gen_range(1, 1001);
+
+            if fd_val > 60.0 {
+                if tile.name == "grass" {
+                    tilemap.set_by_name(x, y, "forest", &tilelist);
+                }
+            } else if fd_val > 50.0 {
+                if tile.name == "grass" {
+                    if r_num > 250 {
+                        tilemap.set_by_name(x, y, "thicker_grass", &tilelist);
+                    } else if r_num > 63 {
+                        tilemap.set_by_name(x, y, "thick_grass", &tilelist);
+                    } else if r_num > 16 {
+                        tilemap.set_by_name(x, y, "flowers", &tilelist);
+                    }
+                }
+            } else if fd_val > 40.0 {
+                if tile.name == "grass" {
+                    if r_num > 500 {
+                        tilemap.set_by_name(x, y, "thick_grass", &tilelist);
+                    } else if r_num > 250 {
+                        tilemap.set_by_name(x, y, "flowers", &tilelist);
+                    }
+                }
+            } else if fd_val > 30.0 {
+                if tile.name == "grass" && r_num > 950 {
+                    tilemap.set_by_name(x, y, "flowers", &tilelist);
+                }
+            } else if fd_val < 30.0 {
+                if tile.name == "grass" {
+                    tilemap.set_by_name(x, y, "sand_0000", &tilelist);
+                } else if tile.name == "hill_grass" {
+                    tilemap.set_by_name(x, y, "hill_sand", &tilelist);
+                } if tile.name == "mountain_grass" {
+                    tilemap.set_by_name(x, y, "mountain_sand", &tilelist);
+                }
+            }
+        }
+    }
+
+    map_png(&mut tilemap, cells, "test10");
+
     println!("Script finished in {} seconds.", now.elapsed().as_secs_f32());
 }
