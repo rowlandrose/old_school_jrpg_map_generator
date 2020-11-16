@@ -171,8 +171,8 @@ fn map_png(tilemap: &Tilemap, cells: u32, filename: &str) {
             let tile = tilemap.get(x, y);
 
             // Get tile graphic from spritesheet
-            let crop_x = tile.id % TILES_WIDE_SPRITE_SHEET as u16;
-            let crop_y = tile.id / TILES_WIDE_SPRITE_SHEET as u16;
+            let crop_x = (tile.id % TILES_WIDE_SPRITE_SHEET as u16) * TILE_SIZE as u16;
+            let crop_y = (tile.id / TILES_WIDE_SPRITE_SHEET as u16) * TILE_SIZE as u16;
 
             let tile_crop = DynamicImage::ImageRgb8(tile_img.clone()).crop_imm(
                 crop_x as u32, crop_y as u32, TILE_SIZE as u32, TILE_SIZE as u32
