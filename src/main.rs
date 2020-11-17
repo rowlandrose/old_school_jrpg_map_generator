@@ -230,6 +230,35 @@ fn distance(x1: i32, y1: i32, x2: i32, y2: i32) -> f32 {
     ((a*a + b*b) as f32).sqrt() as f32
 }
 
+fn neighbor_coor(x: i32, y: i32, cells: u32, direction: &str) -> (u32, u32) {
+
+    let mut coor = (x, y);
+
+    if direction == "up" {
+        coor = (x, y - 1);
+        if coor.1 < 0 {
+            coor.1 = cells as i32;
+        }
+    } else if direction == "down" {
+        coor = (x, y + 1);
+        if coor.1 > cells as i32 {
+            coor.1 = 0;
+        }
+    } else if direction == "left" {
+        coor = (x - 1, y);
+        if coor.0 < 0 {
+            coor.0 = cells as i32;
+        }
+    } else if direction == "right" {
+        coor = (x + 1, y);
+        if coor.0 > cells as i32 {
+            coor.0 = 0;
+        }
+    }
+
+    (coor.0 as u32, coor.1 as u32)
+}
+
 fn main() {
 
     let now = Instant::now(); // For measuring execution time
@@ -523,6 +552,57 @@ fn main() {
 
             if s_val > 80.0 && tile.cat == "grass" {
                 tilemap.set_by_name(x, y, "swamp", &tilelist);
+            }
+        }
+    }
+
+    // Generate coastline dunes
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let tile = tilemap.get(x, y);
+
+            if tile.cat == "grass" {
+
+                let mut next_to_water = false;
+
+                let coor_up = neighbor_coor(x as i32, y as i32, cells, "up");
+                let n_up = tilemap.get(coor_up.0, coor_up.1);
+
+                if n_up.cat == "water" {
+                    next_to_water = true;
+                } else {
+
+                    let coor_down = neighbor_coor(x as i32, y as i32, cells, "down");
+                    let n_down = tilemap.get(coor_down.0, coor_down.1);
+
+                    if n_down.cat == "water" {
+                        next_to_water = true;
+                    } else {
+
+                        let coor_left = neighbor_coor(x as i32, y as i32, cells, "left");
+                        let n_left = tilemap.get(coor_left.0, coor_left.1);
+
+                        if n_left.cat == "water" {
+                            next_to_water = true;
+                        } else {
+
+                            let coor_right = neighbor_coor(x as i32, y as i32, cells, "right");
+                            let n_right = tilemap.get(coor_right.0, coor_right.1);
+
+                            if n_right.cat == "water" {
+                                next_to_water = true;
+                            }
+                        }
+                    }
+                }
+
+                let r_num = rand::thread_rng().gen_range(1, 1001);
+
+                if next_to_water && r_num < 750 {
+                    tilemap.set_by_name(x, y, "sand_0000", &tilelist);
+                }
             }
         }
     }
