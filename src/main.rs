@@ -858,6 +858,70 @@ fn main() {
         }
     }
 
+    // Caves
+
+    let mut valid_cave_positions = vec![];
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let mut valid = false;
+
+            let tile = tilemap.get(x, y);
+
+            if tile.name == "mountain_grass" || tile.name == "mountain_sand" {
+
+                let n_up = neighbor_coor(x as i32, y as i32, cells, "up");
+                let n_down = neighbor_coor(x as i32, y as i32, cells, "down");
+                let n_left = neighbor_coor(x as i32, y as i32, cells, "left");
+                let n_right = neighbor_coor(x as i32, y as i32, cells, "right");
+
+                let tile_up = tilemap.get(n_up.0, n_up.1);
+                let tile_down = tilemap.get(n_down.0, n_down.1);
+                let tile_left = tilemap.get(n_left.0, n_left.1);
+                let tile_right = tilemap.get(n_right.0, n_right.1);
+
+                if tile_up.walkable || tile_down.walkable || tile_left.walkable || tile_right.walkable {
+                    valid = true;
+                }
+
+                if valid_cave_positions.contains(&n_up) || 
+                   valid_cave_positions.contains(&n_down) || 
+                   valid_cave_positions.contains(&n_left) || 
+                   valid_cave_positions.contains(&n_right) {
+
+                    continue;
+               }
+            }
+
+            if tile.name == "hill_grass" || tile.name == "hill_sand" {
+                let r_num = rand::thread_rng().gen_range(0, 1000);
+                if r_num < 100 {
+                    valid = true;
+                }
+            }
+
+            if valid {
+                valid_cave_positions.push((x, y));
+            }
+        }
+    }
+
+    let cave_num: u32 = (valid_cave_positions.len() as f32 / (cells as f32 / 15.0)) as u32;
+
+    for _ in 0..cave_num {
+
+        let r_num = rand::thread_rng().gen_range(0, valid_cave_positions.len());
+        let coor = valid_cave_positions[r_num];
+        let tile = tilemap.get(coor.0, coor.1);
+
+        if tile.cat == "sand" {
+            tilemap.set_by_name(coor.0, coor.1, "cave_sand", &tilelist);
+        } else {
+            tilemap.set_by_name(coor.0, coor.1, "cave_grass", &tilelist);
+        }
+    }
+
     map_png(&mut tilemap, cells, "test10");
 
     println!("Script finished in {} seconds.", now.elapsed().as_secs_f32());
