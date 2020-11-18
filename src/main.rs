@@ -7,6 +7,7 @@ use image::io::Reader as ImageReader; // Reading PNG
 use std::fs; // Filesystem
 use opensimplex_noise_rs::OpenSimplexNoise; // Simplex Noise
 use std::time::Instant; // for timer
+use std::collections::HashMap; // For associative array-like data structures
 
 const TILE_SIZE: u8 = 16;
 const TILES_WIDE_SPRITE_SHEET: u8 = 5;
@@ -179,11 +180,25 @@ fn normalize_heightmap_to_range(
     }
 }
 
-fn test_png(heightmap: &mut Heightmap<f32>, cells: u32, filename: &str) {
+fn test_png_hm(heightmap: &mut Heightmap<f32>, cells: u32, filename: &str) {
 
     let ratio = 256.0 / (HEIGHTMAP_RANGE as f32);
     let img = ImageBuffer::from_fn(cells, cells, |x, y| {
         image::Luma([(heightmap.get(x, y) * ratio).round() as u8])
+    });
+    match fs::create_dir("rendered_images") {
+        Ok(_) => println!("Created directory \"rendered_images\"."),
+        Err(_) => println!("Directory \"rendered_images\" already exists.")
+    };
+    img.save(["rendered_images/", filename, ".png"].concat()).unwrap();
+}
+
+fn test_png_vec(v: Vec<Vec<bool>>, cells: u32, filename: &str) {
+
+    let img = ImageBuffer::from_fn(cells, cells, |x, y| {
+        let cell_val = v[x as usize][y as usize];
+        let luma_val: u8 = if cell_val { 255 } else { 0 };
+        image::Luma([luma_val])
     });
     match fs::create_dir("rendered_images") {
         Ok(_) => println!("Created directory \"rendered_images\"."),
@@ -257,6 +272,32 @@ fn neighbor_coor(x: i32, y: i32, cells: u32, direction: &str) -> (u32, u32) {
     }
 
     (coor.0 as u32, coor.1 as u32)
+}
+
+fn dist_to_water(tilemap: &Tilemap, x: u32, y: u32, cells: u32, direction: &str) -> u32 {
+
+    let mut dist: u32 = 0;
+    let mut water_found = false;
+    let mut coor = (x, y);
+
+    while !water_found {
+
+        coor = neighbor_coor(coor.0 as i32, coor.1 as i32, cells, direction);
+        dist = dist + 1;
+
+        let tile = tilemap.get(coor.0, coor.1);
+
+        if tile.cat == "water" {
+
+            water_found = true;
+        }
+
+        if dist >= cells {
+            water_found = true;
+        }
+    }
+
+    dist
 }
 
 fn main() {
@@ -336,7 +377,7 @@ fn main() {
     // Reset heightmap to desired range
     normalize_heightmap_to_range(&mut heightmap, cells, HEIGHTMAP_RANGE as u32);
 
-    test_png(&mut heightmap, cells, "test");
+    test_png_hm(&mut heightmap, cells, "test");
 
     // Blend heightmap with a simplex noise heightmap
     let noise_seed: i64 = rand::thread_rng().gen();
@@ -362,7 +403,7 @@ fn main() {
         }
     }
 
-    test_png(&mut heightmap, cells, "test2");
+    test_png_hm(&mut heightmap, cells, "test2");
 
     // print one row of cell values for test
     /*for cell in 0..cells {
@@ -395,12 +436,12 @@ fn main() {
         }
     }
 
-    test_png(&mut heightmap, cells, "test3");
+    test_png_hm(&mut heightmap, cells, "test3");
 
     // Reset heightmap to desired range
     normalize_heightmap_to_range(&mut heightmap, cells, HEIGHTMAP_RANGE as u32);
 
-    test_png(&mut heightmap, cells, "test4");
+    test_png_hm(&mut heightmap, cells, "test4");
 
     // Get another diamond-square heightmap (with no island) and combine with 
     // original where there is land. Will result in more varied mountains, 
@@ -443,7 +484,7 @@ fn main() {
         }
     }
 
-    test_png(&mut heightmap, cells, "test5");
+    test_png_hm(&mut heightmap, cells, "test5");
 
     // Here we begin populating tilemap.
     // First determine water, grass, hill and mountain based on heightmap
@@ -484,13 +525,13 @@ fn main() {
     apply_simplex(&mut fd_hm1, cells, 0.088);
     apply_simplex(&mut fd_hm2, cells, 0.022);
 
-    test_png(&mut fd_hm1, cells, "test6");
-    test_png(&mut fd_hm2, cells, "test7");
+    test_png_hm(&mut fd_hm1, cells, "test6");
+    test_png_hm(&mut fd_hm2, cells, "test7");
 
     // combine simplex noise with a finer simplex noise, for more details
     let mut forest_desert_hm = blended_heightmap(fd_hm1, fd_hm2, cells);
 
-    test_png(&mut forest_desert_hm, cells, "test8");
+    test_png_hm(&mut forest_desert_hm, cells, "test8");
 
     // Determine forest and desert tiles based on combined noise map
     for x in 0..cells {
@@ -607,7 +648,161 @@ fn main() {
         }
     }
 
-    map_png(&mut tilemap, cells, "test9");
+    // Generate river starting points
+
+    let mut available_river_starts = vec![];
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let h_val = heightmap.get(x, y);
+
+            if h_val > (CUTOFF_TERRAIN - 10) as f32 {
+                available_river_starts.push((x, y));
+            }
+        }
+    }
+
+    let num_river_starts: u32 = (available_river_starts.len() as f32 / (cells * cells) as f32 * 100.0).ceil() as u32;
+
+    let mut river_starts = vec![];
+
+    for _ in 0..num_river_starts {
+
+        let r_num = rand::thread_rng().gen_range(1, 1001);
+        let river_start = available_river_starts[r_num * available_river_starts.len() / 1000];
+
+        river_starts.push(river_start);
+    }
+
+    // Draw each river
+
+    // binary map of river placement
+
+    let last_dir_opposite = "up";
+
+    let mut river_map_all: Vec<Vec<bool>> = vec![];
+
+    let flow_options = vec!["up","down","left","right"];
+
+    for y in 0..cells {
+        let mut row: Vec<bool> = vec![];
+        for x in 0..cells {
+            row.push(false);
+        }
+        river_map_all.push(row);
+    }
+
+    for river_start in river_starts.iter() {
+
+        let mut river_map: Vec<Vec<bool>> = vec![];
+
+        for y in 0..cells {
+            let mut row: Vec<bool> = vec![];
+            for x in 0..cells {
+                row.push(false);
+            }
+            river_map.push(row);
+        }
+
+        let start_x = river_start.0;
+        let start_y = river_start.1;
+
+        river_map[start_x as usize][start_y as usize] = true;
+
+        let tile = tilemap.get(start_x, start_y);
+
+        // Skip this river start if already under water
+        if tile.cat == "water" {
+            continue;
+        }
+
+        // Determine flow direction by finding water distance for each direction
+        // Then random chance go to closest or random direction
+
+        let mut flowing = true;
+        let mut flow_count = 0;
+        let mut flow_dir;
+
+        let mut current_x = start_x;
+        let mut current_y = start_y;
+
+        while flowing {
+
+            let mut water_dist: HashMap<String, u32> = HashMap::new();
+
+            water_dist.insert(String::from("up"), dist_to_water(&tilemap, current_x, current_y, cells, "up"));
+            water_dist.insert(String::from("down"), dist_to_water(&tilemap, current_x, current_y, cells, "down"));
+            water_dist.insert(String::from("left"), dist_to_water(&tilemap, current_x, current_y, cells, "left"));
+            water_dist.insert(String::from("right"), dist_to_water(&tilemap, current_x, current_y, cells, "right"));
+
+            let mut flow_data: HashMap<String, (u32, u32)> = HashMap::new();
+
+            flow_data.insert(String::from("up"), neighbor_coor(current_x as i32, current_y as i32, cells, "up"));
+            flow_data.insert(String::from("down"), neighbor_coor(current_x as i32, current_y as i32, cells, "down"));
+            flow_data.insert(String::from("left"), neighbor_coor(current_x as i32, current_y as i32, cells, "left"));
+            flow_data.insert(String::from("right"), neighbor_coor(current_x as i32, current_y as i32, cells, "right"));
+
+            flow_dir = "up";
+
+            if water_dist.get("down") < water_dist.get(flow_dir) {
+                flow_dir = "down";
+            }
+            if water_dist.get("left") < water_dist.get(flow_dir) {
+                flow_dir = "left";
+            }
+            if water_dist.get("right") < water_dist.get(flow_dir) {
+                flow_dir = "right";
+            }
+
+            let mut flow_coor = flow_data.get(flow_dir).unwrap();
+            let r_num = rand::thread_rng().gen_range(1, 1001);
+
+            if river_map[flow_coor.0 as usize][flow_coor.1 as usize] || r_num < 500 {
+
+                let r_num2 = rand::thread_rng().gen_range(0, 4);
+
+                flow_dir = flow_options[r_num2];
+                flow_coor = flow_data.get(flow_dir).unwrap();
+            }
+
+            let flow_x = flow_coor.0;
+            let flow_y = flow_coor.1;
+
+            let flow_tile = tilemap.get(flow_x, flow_y);
+
+            // If over water, or prev spot, draw and stop
+            if flow_tile.cat == "water" || flow_count > 2500 {
+
+                for y in 0..cells {
+                    for x in 0..cells {
+
+                        if river_map[x as usize][y as usize] {
+                            tilemap.set_by_name(x, y, "water_0000", &tilelist);
+                        }
+                    }
+                }
+
+                flowing = false;
+                flow_count = 0;
+            }
+
+            if !river_map[flow_x as usize][flow_y as usize] {
+                
+                river_map[flow_x as usize][flow_y as usize] = true;
+                river_map_all[flow_x as usize][flow_y as usize] = true;
+                
+                current_x = flow_x;
+                current_y = flow_y;
+            }
+
+            flow_count = flow_count + 1;
+        }
+    }
+
+    test_png_vec(river_map_all, cells, "test9");
+
+    map_png(&mut tilemap, cells, "test10");
 
     println!("Script finished in {} seconds.", now.elapsed().as_secs_f32());
 }
