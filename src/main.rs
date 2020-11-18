@@ -679,15 +679,13 @@ fn main() {
 
     // binary map of river placement
 
-    let last_dir_opposite = "up";
-
     let mut river_map_all: Vec<Vec<bool>> = vec![];
 
     let flow_options = vec!["up","down","left","right"];
 
-    for y in 0..cells {
+    for _ in 0..cells {
         let mut row: Vec<bool> = vec![];
-        for x in 0..cells {
+        for _ in 0..cells {
             row.push(false);
         }
         river_map_all.push(row);
@@ -697,9 +695,9 @@ fn main() {
 
         let mut river_map: Vec<Vec<bool>> = vec![];
 
-        for y in 0..cells {
+        for _ in 0..cells {
             let mut row: Vec<bool> = vec![];
-            for x in 0..cells {
+            for _ in 0..cells {
                 row.push(false);
             }
             river_map.push(row);
