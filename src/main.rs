@@ -21,16 +21,18 @@ struct Tile {
     name: String,
     cat: String,
     walkable: bool,
+    bridge: bool,
     id: u16,
 }
 
 impl Tile {
 
-    fn new(name: &str, cat: &str, walkable: bool, id: u16) -> Tile {
+    fn new(name: &str, cat: &str, walkable: bool, bridge: bool, id: u16) -> Tile {
         Tile { 
             name: String::from(name), 
             cat: String::from(cat), 
             walkable, 
+            bridge,
             id 
         }
     }
@@ -193,7 +195,7 @@ fn test_png_hm(heightmap: &mut Heightmap<f32>, cells: u32, filename: &str) {
     img.save(["rendered_images/", filename, ".png"].concat()).unwrap();
 }
 
-fn test_png_vec(v: Vec<Vec<bool>>, cells: u32, filename: &str) {
+fn test_png_vec(v: &Vec<Vec<bool>>, cells: u32, filename: &str) {
 
     let img = ImageBuffer::from_fn(cells, cells, |x, y| {
         let cell_val = v[x as usize][y as usize];
@@ -309,56 +311,56 @@ fn main() {
     // Define tilelist with new tile information
 
     let tilelist = Tilelist::new(vec![
-        Tile::new("grass",             "grass", true,  0),
-        Tile::new("flowers",           "grass", true,  1),
-        Tile::new("thick_grass",       "grass", true,  2),
-        Tile::new("thicker_grass",     "grass", true,  3),
-        Tile::new("forest",            "grass", true,  4),
-        Tile::new("swamp",             "swamp", true,  5),
-        Tile::new("castle_grass",      "grass", true,  6),
-        Tile::new("town_grass",        "grass", true,  7),
-        Tile::new("castle_sand",       "sand",  true,  8),
-        Tile::new("town_sand",         "sand",  true,  9),
-        Tile::new("bridge_up_down",    "water", true,  10),
-        Tile::new("bridge_left_right", "water", true,  11),
-        Tile::new("water_0000",        "water", false, 12),
-        Tile::new("sand_0000",         "sand",  true,  13),
-        Tile::new("cave_grass",        "grass", true,  14),
-        Tile::new("hill_grass",        "grass", true,  15),
-        Tile::new("mountain_grass",    "grass", false, 16),
-        Tile::new("hill_sand",         "sand",  true,  17),
-        Tile::new("mountain_sand",     "sand",  false, 18),
-        Tile::new("cave_sand",         "sand",  true,  19),
-        Tile::new("water_1111",        "water", false, 20),
-        Tile::new("water_1001",        "water", false, 21),
-        Tile::new("water_1100",        "water", false, 22),
-        Tile::new("water_0011",        "water", false, 23),
-        Tile::new("water_0110",        "water", false, 24),
-        Tile::new("water_1010",        "water", false, 25),
-        Tile::new("water_1101",        "water", false, 26),
-        Tile::new("water_1110",        "water", false, 27),
-        Tile::new("water_1011",        "water", false, 28),
-        Tile::new("water_0111",        "water", false, 29),
-        Tile::new("water_0101",        "water", false, 30),
-        Tile::new("water_1000",        "water", false, 31),
-        Tile::new("water_0100",        "water", false, 32),
-        Tile::new("water_0010",        "water", false, 33),
-        Tile::new("water_0001",        "water", false, 34),
-        Tile::new("sand_1111",         "sand",  true,  35),
-        Tile::new("sand_1001",         "sand",  true,  36),
-        Tile::new("sand_1100",         "sand",  true,  37),
-        Tile::new("sand_0011",         "sand",  true,  38),
-        Tile::new("sand_0110",         "sand",  true,  39),
-        Tile::new("sand_1010",         "sand",  true,  40),
-        Tile::new("sand_1101",         "sand",  true,  41),
-        Tile::new("sand_1110",         "sand",  true,  42),
-        Tile::new("sand_1011",         "sand",  true,  43),
-        Tile::new("sand_0111",         "sand",  true,  44),
-        Tile::new("sand_0101",         "sand",  true,  45),
-        Tile::new("sand_1000",         "sand",  true,  46),
-        Tile::new("sand_0100",         "sand",  true,  47),
-        Tile::new("sand_0010",         "sand",  true,  48),
-        Tile::new("sand_0001",         "sand",  true,  49),
+        Tile::new("grass",             "grass", true,  false, 0),
+        Tile::new("flowers",           "grass", true,  false, 1),
+        Tile::new("thick_grass",       "grass", true,  false, 2),
+        Tile::new("thicker_grass",     "grass", true,  false, 3),
+        Tile::new("forest",            "grass", true,  false, 4),
+        Tile::new("swamp",             "swamp", true,  false, 5),
+        Tile::new("castle_grass",      "grass", true,  false, 6),
+        Tile::new("town_grass",        "grass", true,  false, 7),
+        Tile::new("castle_sand",       "sand",  true,  false, 8),
+        Tile::new("town_sand",         "sand",  true,  false, 9),
+        Tile::new("bridge_up_down",    "water", true,  true,  10),
+        Tile::new("bridge_left_right", "water", true,  true,  11),
+        Tile::new("water_0000",        "water", false, false, 12),
+        Tile::new("sand_0000",         "sand",  true,  false, 13),
+        Tile::new("cave_grass",        "grass", true,  false, 14),
+        Tile::new("hill_grass",        "grass", true,  false, 15),
+        Tile::new("mountain_grass",    "grass", false, false, 16),
+        Tile::new("hill_sand",         "sand",  true,  false, 17),
+        Tile::new("mountain_sand",     "sand",  false, false, 18),
+        Tile::new("cave_sand",         "sand",  true,  false, 19),
+        Tile::new("water_1111",        "water", false, false, 20),
+        Tile::new("water_1001",        "water", false, false, 21),
+        Tile::new("water_1100",        "water", false, false, 22),
+        Tile::new("water_0011",        "water", false, false, 23),
+        Tile::new("water_0110",        "water", false, false, 24),
+        Tile::new("water_1010",        "water", false, false, 25),
+        Tile::new("water_1101",        "water", false, false, 26),
+        Tile::new("water_1110",        "water", false, false, 27),
+        Tile::new("water_1011",        "water", false, false, 28),
+        Tile::new("water_0111",        "water", false, false, 29),
+        Tile::new("water_0101",        "water", false, false, 30),
+        Tile::new("water_1000",        "water", false, false, 31),
+        Tile::new("water_0100",        "water", false, false, 32),
+        Tile::new("water_0010",        "water", false, false, 33),
+        Tile::new("water_0001",        "water", false, false, 34),
+        Tile::new("sand_1111",         "sand",  true,  false, 35),
+        Tile::new("sand_1001",         "sand",  true,  false, 36),
+        Tile::new("sand_1100",         "sand",  true,  false, 37),
+        Tile::new("sand_0011",         "sand",  true,  false, 38),
+        Tile::new("sand_0110",         "sand",  true,  false, 39),
+        Tile::new("sand_1010",         "sand",  true,  false, 40),
+        Tile::new("sand_1101",         "sand",  true,  false, 41),
+        Tile::new("sand_1110",         "sand",  true,  false, 42),
+        Tile::new("sand_1011",         "sand",  true,  false, 43),
+        Tile::new("sand_0111",         "sand",  true,  false, 44),
+        Tile::new("sand_0101",         "sand",  true,  false, 45),
+        Tile::new("sand_1000",         "sand",  true,  false, 46),
+        Tile::new("sand_0100",         "sand",  true,  false, 47),
+        Tile::new("sand_0010",         "sand",  true,  false, 48),
+        Tile::new("sand_0001",         "sand",  true,  false, 49),
     ]);
 
     //// Generate main heightmap
@@ -798,7 +800,63 @@ fn main() {
         }
     }
 
-    test_png_vec(river_map_all, cells, "test9");
+    test_png_vec(&river_map_all, cells, "test9");
+
+    // Bridges
+
+    let mut valid_bridge_positions = vec![];
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            if river_map_all[x as usize][y as usize] {
+
+                let n_up = neighbor_coor(x as i32, y as i32, cells, "up");
+                let n_down = neighbor_coor(x as i32, y as i32, cells, "down");
+                let n_left = neighbor_coor(x as i32, y as i32, cells, "left");
+                let n_right = neighbor_coor(x as i32, y as i32, cells, "right");
+
+                let tile_up = tilemap.get(n_up.0, n_up.1);
+                let tile_down = tilemap.get(n_down.0, n_down.1);
+                let tile_left = tilemap.get(n_left.0, n_left.1);
+                let tile_right = tilemap.get(n_right.0, n_right.1);
+
+                if tile_up.bridge || tile_down.bridge || tile_left.bridge || tile_right.bridge {
+                    continue;
+                } else if tile_up.walkable && tile_down.walkable {
+                    tilemap.set_by_name(x, y, "bridge_up_down", &tilelist);
+                } else if tile_left.walkable && tile_right.walkable {
+                    tilemap.set_by_name(x, y, "bridge_left_right", &tilelist);
+                }
+
+                valid_bridge_positions.push((x, y));
+            }
+        }
+    }
+
+    // Erase most bridges until at aesthetically pleasing level
+
+    let mut final_bridge_positions = vec![];
+
+    let num_bridges = river_starts.len() * 3;
+
+    while final_bridge_positions.len() < num_bridges {
+
+        let r_num = rand::thread_rng().gen_range(0, valid_bridge_positions.len());
+
+        let coor = valid_bridge_positions[r_num];
+
+        if !final_bridge_positions.contains(&coor) {
+            final_bridge_positions.push(coor);
+        }
+    }
+
+    for bridge_pos in valid_bridge_positions.iter() {
+
+        if !final_bridge_positions.contains(bridge_pos) {
+            tilemap.set_by_name(bridge_pos.0, bridge_pos.1, "water_0000", &tilelist);
+        }
+    }
 
     map_png(&mut tilemap, cells, "test10");
 
