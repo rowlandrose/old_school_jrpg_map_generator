@@ -8,7 +8,7 @@ Written in Rust
 
 Based upon the [create.world](https://github.com/rowlandrose/create.world) JS project, which includes "Old School RPG Map Generator"
 
-Version 0.1.0
+Version 1.0.0
 
 # Special Thanks and Attributions
 
@@ -31,6 +31,10 @@ Gilles Leblanc for his series of blog posts on [Creating a random 2d game world 
 [Raiders (WIP)](https://github.com/dabernado/raiders) for having an example of how to use the "terr" terrain generation algorythms successfully (had to use git repo instead of crate).
 
 # Change Log
+
+1.0.0 - 11/18/2020
+
+Finished PNG rendering to level of quality on create.world.
 
 0.1.0 - 11/13/2020
 

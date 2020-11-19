@@ -1044,6 +1044,88 @@ fn main() {
         }
     }
 
+    // Do transition tiles for water & sand
+
+    for x in 0..cells {
+        for y in 0..cells {
+
+            let tile = tilemap.get(x, y);
+
+            let n_up = neighbor_coor(x as i32, y as i32, cells, "up");
+            let n_down = neighbor_coor(x as i32, y as i32, cells, "down");
+            let n_left = neighbor_coor(x as i32, y as i32, cells, "left");
+            let n_right = neighbor_coor(x as i32, y as i32, cells, "right");
+
+            let tile_up = tilemap.get(n_up.0, n_up.1);
+            let tile_down = tilemap.get(n_down.0, n_down.1);
+            let tile_left = tilemap.get(n_left.0, n_left.1);
+            let tile_right = tilemap.get(n_right.0, n_right.1);
+
+            if tile.name == "sand_0000" {
+
+                let mut t_str = String::from("sand_");
+
+                // Order is important: up, right, down, left
+
+                if tile_up.cat == "sand" || tile_up.cat == "water" {
+                    t_str.push('0');
+                } else {
+                    t_str.push('1');
+                }
+
+                if tile_right.cat == "sand" || tile_right.cat == "water" {
+                    t_str.push('0');
+                } else {
+                    t_str.push('1');
+                }
+
+                if tile_down.cat == "sand" || tile_down.cat == "water" {
+                    t_str.push('0');
+                } else {
+                    t_str.push('1');
+                }
+
+                if tile_left.cat == "sand" || tile_left.cat == "water" {
+                    t_str.push('0');
+                } else {
+                    t_str.push('1');
+                }
+                tilemap.set_by_name(x, y, &t_str, &tilelist);
+
+            } else if tile.name == "water_0000" {
+
+                let mut t_str = String::from("water_");
+
+                // Order is important: up, right, down, left
+
+                if tile_up.cat == "water" {
+                    t_str.push('0');
+                } else {
+                    t_str.push('1');
+                }
+
+                if tile_right.cat == "water" {
+                    t_str.push('0');
+                } else {
+                    t_str.push('1');
+                }
+
+                if tile_down.cat == "water" {
+                    t_str.push('0');
+                } else {
+                    t_str.push('1');
+                }
+
+                if tile_left.cat == "water" {
+                    t_str.push('0');
+                } else {
+                    t_str.push('1');
+                }
+                tilemap.set_by_name(x, y, &t_str, &tilelist);
+            }
+        }
+    }
+
     map_png(&mut tilemap, cells, "test10");
 
     println!("Script finished in {} seconds.", now.elapsed().as_secs_f32());
